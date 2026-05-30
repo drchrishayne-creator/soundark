@@ -1,7 +1,3 @@
-bash
-
-cat /mnt/user-data/outputs/index.html
-Output
 
 <!DOCTYPE html>
 <html lang="en">
@@ -197,6 +193,209 @@ Output
     .mapboxgl-ctrl-group button { background-color: rgba(242,248,246,0.97) !important; }
     .mapboxgl-ctrl-attrib-inner { background: rgba(242,248,246,0.95); padding: 2px 6px; border-radius: 3px; }
 
+    /* ── Upload Panel (slide-in from right) ── */
+    .upload-overlay {
+      position: fixed; inset: 0; z-index: 2000;
+      background: rgba(30,43,31,0.5);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .upload-overlay.active { opacity: 1; pointer-events: all; }
+
+    .upload-panel {
+      position: fixed; top: 0; right: 0; bottom: 0; z-index: 2001;
+      width: 480px; max-width: 100vw;
+      background: var(--cream);
+      box-shadow: -8px 0 48px rgba(30,43,31,0.3);
+      display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: hidden;
+    }
+    .upload-panel.active { transform: translateX(0); }
+
+    .upload-panel-header {
+      background: var(--forest);
+      padding: 1.25rem 1.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(78,154,138,0.2);
+    }
+    .upload-panel-header h2 {
+      font-family: var(--font-display); font-size: 1.1rem; font-weight: 600;
+      color: var(--parchment); display: flex; align-items: center; gap: 0.6rem;
+    }
+    .upload-panel-header h2 svg { color: var(--accent-light); }
+    .upload-panel-close {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      display: flex; align-items: center; justify-content: center;
+      transition: background var(--transition);
+      color: var(--parchment);
+    }
+    .upload-panel-close:hover { background: rgba(255,255,255,0.2); }
+
+    .upload-panel-body {
+      flex: 1; overflow-y: auto; padding: 1.5rem;
+      display: flex; flex-direction: column; gap: 1.25rem;
+    }
+    .upload-panel-body::-webkit-scrollbar { width: 4px; }
+    .upload-panel-body::-webkit-scrollbar-track { background: transparent; }
+    .upload-panel-body::-webkit-scrollbar-thumb { background: var(--parchment-dk); border-radius: 2px; }
+
+    .upload-section-label {
+      font-size: 0.65rem; font-weight: 600; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--moss);
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--parchment-dk);
+      margin-bottom: 0.25rem;
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+    .form-group label {
+      font-size: 0.78rem; font-weight: 500; color: var(--slate);
+      display: flex; align-items: center; gap: 0.3rem;
+    }
+    .form-group label .required { color: var(--accent); font-size: 0.7rem; }
+
+    .form-input, .form-select, .form-textarea {
+      width: 100%; padding: 0.6rem 0.8rem;
+      font-family: var(--font-sans); font-size: 0.85rem;
+      background: var(--white); color: var(--slate);
+      border: 1px solid rgba(92,122,94,0.25); border-radius: var(--radius);
+      outline: none; transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(78,154,138,0.12);
+    }
+    .form-input::placeholder, .form-textarea::placeholder { color: #aaa; }
+    .form-textarea { resize: vertical; min-height: 80px; line-height: 1.55; }
+    .form-select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235C7A5E' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 0.75rem center;
+      padding-right: 2.2rem; cursor: pointer;
+    }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+    /* ── File drop zone ── */
+    .file-dropzone {
+      border: 2px dashed rgba(78,154,138,0.35);
+      border-radius: 6px; background: rgba(78,154,138,0.04);
+      padding: 1.5rem 1rem; text-align: center;
+      cursor: pointer; transition: all var(--transition);
+      position: relative;
+    }
+    .file-dropzone:hover, .file-dropzone.dragover {
+      border-color: var(--accent);
+      background: rgba(78,154,138,0.08);
+    }
+    .file-dropzone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .file-dropzone-icon { color: var(--accent); margin: 0 auto 0.5rem; display: block; }
+    .file-dropzone-text { font-size: 0.82rem; color: var(--slate-mid); line-height: 1.5; }
+    .file-dropzone-text strong { color: var(--accent); }
+    .file-dropzone-hint { font-size: 0.72rem; color: #aaa; margin-top: 0.25rem; }
+    .file-selected {
+      display: flex; align-items: center; gap: 0.6rem;
+      background: rgba(78,154,138,0.08); border: 1px solid rgba(78,154,138,0.25);
+      border-radius: var(--radius); padding: 0.6rem 0.8rem;
+      font-size: 0.82rem; color: var(--forest);
+    }
+    .file-selected svg { color: var(--accent); flex-shrink: 0; }
+    .file-selected-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+    .file-selected-size { color: var(--slate-mid); font-size: 0.72rem; flex-shrink: 0; }
+    .file-clear { color: var(--slate-mid); transition: color var(--transition); flex-shrink: 0; }
+    .file-clear:hover { color: #c0392b; }
+
+    /* ── Mini map for pin placement ── */
+    .pin-map-wrap {
+      border: 1px solid rgba(92,122,94,0.25); border-radius: var(--radius);
+      overflow: hidden; position: relative;
+    }
+    #uploadMap { width: 100%; height: 200px; }
+    .pin-map-hint {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: rgba(42,63,58,0.85); color: var(--parchment);
+      font-size: 0.7rem; text-align: center; padding: 0.35rem;
+      pointer-events: none; letter-spacing: 0.04em;
+    }
+    .pin-coords {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;
+    }
+    .pin-coord-display {
+      background: var(--white); border: 1px solid rgba(92,122,94,0.25);
+      border-radius: var(--radius); padding: 0.45rem 0.7rem;
+      font-size: 0.78rem; color: var(--slate-mid);
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .pin-coord-display span { font-family: monospace; color: var(--forest); font-weight: 500; }
+
+    /* ── Equipment other field ── */
+    .equipment-other { display: none; margin-top: 0.5rem; }
+    .equipment-other.visible { display: block; }
+
+    /* ── Upload footer ── */
+    .upload-panel-footer {
+      padding: 1rem 1.5rem;
+      background: var(--parchment);
+      border-top: 1px solid var(--parchment-dk);
+      display: flex; gap: 0.75rem; flex-shrink: 0;
+    }
+    .btn-submit {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      font-size: 0.82rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--white); background: var(--accent);
+      padding: 0.75rem 1.5rem; border-radius: var(--radius);
+      transition: background var(--transition), transform 0.15s ease;
+    }
+    .btn-submit:hover:not(:disabled) { background: var(--forest-mid); }
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-cancel {
+      font-size: 0.82rem; font-weight: 500; color: var(--slate-mid);
+      padding: 0.75rem 1.2rem; border-radius: var(--radius);
+      background: var(--parchment-dk); transition: background var(--transition);
+    }
+    .btn-cancel:hover { background: var(--parchment-dk); color: var(--forest); }
+
+    /* ── Upload progress / status ── */
+    .upload-status { display: none; }
+    .upload-status.visible { display: block; }
+    .upload-progress-bar {
+      height: 4px; background: var(--parchment-dk); border-radius: 2px; overflow: hidden; margin-bottom: 0.5rem;
+    }
+    .upload-progress-fill {
+      height: 100%; background: var(--accent); border-radius: 2px;
+      width: 0%; transition: width 0.3s ease;
+    }
+    .upload-status-text { font-size: 0.78rem; color: var(--slate-mid); text-align: center; }
+
+    .upload-success {
+      display: none; flex-direction: column; align-items: center;
+      text-align: center; padding: 2rem 1.5rem; gap: 1rem;
+    }
+    .upload-success.visible { display: flex; }
+    .upload-success-icon {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: rgba(78,154,138,0.12);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .upload-success-icon svg { color: var(--accent); }
+    .upload-success h3 { font-family: var(--font-display); font-size: 1.1rem; color: var(--forest); }
+    .upload-success p { font-size: 0.88rem; color: var(--slate-mid); line-height: 1.6; }
+    .btn-upload-another {
+      font-size: 0.78rem; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--white); background: var(--accent);
+      padding: 0.6rem 1.4rem; border-radius: var(--radius);
+      transition: background var(--transition);
+    }
+    .btn-upload-another:hover { background: var(--forest-mid); }
+
     /* ── Responsive ── */
     @media (max-width: 900px) {
       .about { grid-template-columns: 1fr; gap: 3rem; padding: 3.5rem 1.5rem; }
@@ -206,10 +405,12 @@ Output
       .hero-header { padding: 1.75rem 1.25rem 1.5rem; }
       .upload-strip { padding: 1rem 1.25rem; flex-direction: column; align-items: flex-start; }
       footer { padding: 2rem 1.25rem; flex-direction: column; align-items: flex-start; }
+      .upload-panel { width: 100vw; }
     }
     @media (max-width: 600px) {
       .sound-panel { width: calc(100vw - 2rem); right: 1rem; left: 1rem; }
       .map-legend { display: none; }
+      .form-row { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -238,7 +439,7 @@ Output
       <li><a href="#how">Contribute</a></li>
     </ul>
     <div class="nav-cta">
-      <a href="#" class="btn-nav-primary">Upload a Sound</a>
+      <button class="btn-nav-primary" onclick="openUploadPanel()">Upload a Sound</button>
     </div>
   </nav>
 
@@ -329,7 +530,7 @@ Output
 
       <!-- Count -->
       <div class="map-count">
-        <span id="pinCount">9</span>
+        <span id="pinCount">0</span>
         recordings
       </div>
     </div>
@@ -337,10 +538,10 @@ Output
     <!-- Upload strip -->
     <div class="upload-strip">
       <p class="upload-strip-text">Heard something worth capturing? <strong>Add your recording to the archive.</strong></p>
-      <a href="#" class="btn-upload">
+      <button class="btn-upload" onclick="openUploadPanel()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         Upload a Sound
-      </a>
+      </button>
     </div>
   </section>
 
@@ -426,16 +627,169 @@ Output
     <p class="footer-copy">&copy; 2025 The SoundArk Project · thesoundark.org.uk</p>
   </footer>
 
+  <!-- ── Upload overlay + panel ── -->
+  <div class="upload-overlay" id="uploadOverlay" onclick="closeUploadPanel()"></div>
+
+  <div class="upload-panel" id="uploadPanel">
+    <div class="upload-panel-header">
+      <h2>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload a Sound
+      </h2>
+      <button class="upload-panel-close" onclick="closeUploadPanel()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Form -->
+    <div class="upload-panel-body" id="uploadFormBody">
+
+      <!-- Audio file -->
+      <div>
+        <div class="upload-section-label">Audio File</div>
+        <div class="file-dropzone" id="dropzone">
+          <input type="file" id="audioFile" accept=".wav,.mp3,.aiff,.aif,.m4a" />
+          <svg class="file-dropzone-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          <p class="file-dropzone-text"><strong>Choose a file</strong> or drag it here</p>
+          <p class="file-dropzone-hint">WAV, MP3, AIFF or M4A · max 50MB</p>
+        </div>
+        <div class="file-selected" id="fileSelected" style="display:none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          <span class="file-selected-name" id="fileName"></span>
+          <span class="file-selected-size" id="fileSize"></span>
+          <button class="file-clear" onclick="clearFile()" title="Remove file">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Details -->
+      <div>
+        <div class="upload-section-label">Recording Details</div>
+        <div style="display:flex;flex-direction:column;gap:0.75rem;">
+          <div class="form-group">
+            <label>Title <span class="required">*</span></label>
+            <input class="form-input" type="text" id="uploadTitle" placeholder="e.g. Salisbury Cathedral — Nave at Dawn" maxlength="120" />
+          </div>
+          <div class="form-group">
+            <label>Description <span class="required">*</span></label>
+            <textarea class="form-textarea" id="uploadDescription" placeholder="Describe what you recorded and what makes it acoustically interesting…" maxlength="600"></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Sound Type <span class="required">*</span></label>
+              <select class="form-select" id="uploadType">
+                <option value="">Select…</option>
+                <option value="nature">Nature</option>
+                <option value="external">External Architectural</option>
+                <option value="internal">Internal Architectural</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Location Type <span class="required">*</span></label>
+              <select class="form-select" id="uploadLocationType">
+                <option value="">Select…</option>
+                <option value="cathedral">Cathedral</option>
+                <option value="museum">Museum</option>
+                <option value="forest">Forest</option>
+                <option value="coastal">Coastal</option>
+                <option value="river">River</option>
+                <option value="cave">Cave</option>
+                <option value="industrial">Industrial Space</option>
+                <option value="field">Field</option>
+                <option value="mountain">Mountain</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Recording Date</label>
+              <input class="form-input" type="month" id="uploadDate" />
+            </div>
+            <div class="form-group">
+              <label>Contributor Name</label>
+              <input class="form-input" type="text" id="uploadContributor" placeholder="Your name or handle" maxlength="80" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Equipment</label>
+            <select class="form-select" id="uploadEquipment" onchange="toggleEquipmentOther()">
+              <option value="">Select…</option>
+              <option value="Field recorder">Field recorder</option>
+              <option value="Phone">Phone</option>
+              <option value="other">Other (please specify)</option>
+            </select>
+            <div class="equipment-other" id="equipmentOther">
+              <input class="form-input" type="text" id="uploadEquipmentOther" placeholder="Describe your recording equipment…" maxlength="120" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Location -->
+      <div>
+        <div class="upload-section-label">Location</div>
+        <div style="display:flex;flex-direction:column;gap:0.75rem;">
+          <div class="form-group">
+            <label>Location Name <span class="required">*</span></label>
+            <input class="form-input" type="text" id="uploadLocationName" placeholder="e.g. Salisbury Cathedral, Wiltshire" maxlength="120" />
+          </div>
+          <div class="form-group">
+            <label>Pin on Map <span class="required">*</span> <span style="font-weight:300;color:var(--slate-mid);font-size:0.72rem;">— click map to place</span></label>
+            <div class="pin-map-wrap">
+              <div id="uploadMap"></div>
+              <div class="pin-map-hint" id="pinMapHint">Click anywhere on the map to place your pin</div>
+            </div>
+            <div class="pin-coords">
+              <div class="pin-coord-display">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Lat: <span id="displayLat">—</span>
+              </div>
+              <div class="pin-coord-display">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Lng: <span id="displayLng">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload progress -->
+      <div class="upload-status" id="uploadStatus">
+        <div class="upload-progress-bar">
+          <div class="upload-progress-fill" id="uploadProgressFill"></div>
+        </div>
+        <div class="upload-status-text" id="uploadStatusText">Uploading…</div>
+      </div>
+
+    </div>
+
+    <!-- Success state -->
+    <div class="upload-success" id="uploadSuccess">
+      <div class="upload-success-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h3>Sound uploaded successfully</h3>
+      <p>Your recording has been added to the archive and will appear on the map shortly.</p>
+      <button class="btn-upload-another" onclick="resetUploadForm()">Upload Another</button>
+    </div>
+
+    <div class="upload-panel-footer" id="uploadPanelFooter">
+      <button class="btn-cancel" onclick="closeUploadPanel()">Cancel</button>
+      <button class="btn-submit" id="submitBtn" onclick="submitUpload()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Submit Recording
+      </button>
+    </div>
+  </div>
+
   <audio id="audioPlayer" preload="none"></audio>
 
   <script>
-    // ── Supabase config ───────────────────────────────────────────
-    // Replace these placeholders with your real values from Supabase → Settings → API
-    const SUPABASE_URL      = 'https://fijhgqlqlqmtkgqduldv.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_UXAqK65RG943JoXjzw80WQ_6fhiB2BV';
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // ── Supabase init ─────────────────────────────────────────────
+    const sb = window.supabase.createClient(CONFIG.supabase.url, CONFIG.supabase.anonKey);
 
-    // ── Fallback placeholder sounds (shown while DB loads) ────────
+    // ── Fallback placeholder sounds ───────────────────────────────
     const placeholderSounds = [
       { id:1, title:"Tate Modern — Turbine Hall", type:"internal", type_label:"Internal Architectural", location_type:"museum", location_name:"London, UK", description:"The vast acoustic space of the Turbine Hall on a busy Saturday morning — distant footsteps, murmured voices, extraordinary reverberant space.", recorded_date:"March 2024", lat:51.5076, lng:-0.0994, audio_url:null },
       { id:2, title:"Wells Cathedral Nave", type:"internal", type_label:"Internal Architectural", location_type:"cathedral", location_name:"Wells, Somerset", description:"Early morning resonance in the nave — footsteps on stone, distant organ drone, extraordinary natural reverb.", recorded_date:"January 2024", lat:51.2092, lng:-2.6437, audio_url:null },
@@ -483,12 +837,12 @@ Output
       });
     }
 
-    // ── Panel ─────────────────────────────────────────────────────
+    // ── Sound Panel ───────────────────────────────────────────────
     function openPanel(sound) {
       currentSound = sound;
       document.getElementById('soundPanel').classList.add('active');
       const typeLabel = sound.type_label || sound.typeLabel || '';
-      const locType = sound.location_type || sound.locationType || '';
+      const locType   = sound.location_type || sound.locationType || '';
       document.getElementById('panelType').textContent = typeLabel + ' · ' + locType.charAt(0).toUpperCase() + locType.slice(1);
       document.getElementById('panelTitle').textContent = sound.title;
       document.getElementById('panelLocation').querySelector('span').textContent = sound.location_name || sound.locationName || '';
@@ -598,9 +952,9 @@ Output
       const type    = document.getElementById('filterType').value;
       const locType = document.getElementById('filterLocation').value;
       filteredSounds = allSounds.filter(s => {
-        const locName = s.location_name || s.locationName || '';
+        const locName  = s.location_name || s.locationName || '';
         const locType2 = s.location_type || s.locationType || '';
-        if (text && !s.title.toLowerCase().includes(text) && !(s.description||'').toLowerCase().includes(text) && !locName.toLowerCase().includes(text)) return false;
+        if (text    && !s.title.toLowerCase().includes(text) && !(s.description||'').toLowerCase().includes(text) && !locName.toLowerCase().includes(text)) return false;
         if (type    && s.type !== type) return false;
         if (locType && locType2 !== locType) return false;
         return true;
@@ -608,7 +962,7 @@ Output
       renderMarkers();
     }
 
-    // ── Load sounds from Supabase (falls back to placeholders) ──
+    // ── Load sounds ───────────────────────────────────────────────
     async function loadSounds() {
       try {
         const { data, error } = await sb.from('sounds').select('*').eq('status','approved').order('created_at', { ascending: false });
@@ -617,7 +971,6 @@ Output
           allSounds = data;
           console.log('Loaded', data.length, 'sounds from Supabase');
         } else {
-          // No sounds in DB yet — use placeholders
           allSounds = placeholderSounds;
           console.log('No sounds in DB yet — using placeholders');
         }
@@ -630,15 +983,14 @@ Output
       document.getElementById('pinCount').textContent = filteredSounds.length;
     }
 
-    // ── Mapbox init ───────────────────────────────────────────────
-    // Replace YOUR_MAPBOX_TOKEN_HERE with your real pk.eyJ1... token
-    mapboxgl.accessToken = 'pk.eyJ1IjoiY2hyaXNoYXluZSIsImEiOiJjbXByM25uYjMwcHI0MnpyM2RxcHZuY2FxIn0.sIPHMdfNRB74lrkLUwsLig';
+    // ── Mapbox main map ───────────────────────────────────────────
+    mapboxgl.accessToken = CONFIG.mapbox.token;
 
     map = new mapboxgl.Map({
       container: 'map',
-      style: 'mapbox://styles/mapbox/outdoors-v12',
-      center: [-1.0, 51.8],
-      zoom: 5.2,
+      style: CONFIG.map.style,
+      center: CONFIG.map.center,
+      zoom: CONFIG.map.zoom,
       minZoom: 2,
       maxZoom: 18,
       attributionControl: false
@@ -648,7 +1000,6 @@ Output
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
     map.on('load', () => { loadSounds(); });
     map.on('error', (e) => {
-      // Only show error message for critical load failures, not tile errors from zooming
       if (e.error && e.error.status === 401) {
         console.warn('Mapbox auth error:', e.error);
         const mapEl = document.getElementById('map');
@@ -656,7 +1007,7 @@ Output
         mapEl.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0.75rem;color:#2A3F3A;font-family:'Nunito Sans',sans-serif;text-align:center;padding:2rem;">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#5B8C7A" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
           <strong style="font-size:1rem;">Map could not load</strong>
-          <p style="font-size:0.85rem;opacity:0.7;max-width:320px;">Check your Mapbox token is correct and your domain is listed in Allowed URLs.</p>
+          <p style="font-size:0.85rem;opacity:0.7;max-width:320px;">Check your Mapbox token and Allowed URLs.</p>
         </div>`;
       } else {
         console.warn('Mapbox minor error (ignored):', e.error);
@@ -665,6 +1016,236 @@ Output
     map.on('click', (e) => {
       if (!e.originalEvent.target.closest('.map-pin')) closePanel();
     });
+
+    // ── Upload panel ──────────────────────────────────────────────
+    let uploadMap       = null;
+    let uploadMarker    = null;
+    let uploadLat       = null;
+    let uploadLng       = null;
+    let selectedFile    = null;
+
+    function openUploadPanel() {
+      document.getElementById('uploadOverlay').classList.add('active');
+      document.getElementById('uploadPanel').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      // Init mini map after panel is visible
+      setTimeout(() => {
+        if (!uploadMap) initUploadMap();
+        else uploadMap.resize();
+      }, 50);
+    }
+
+    function closeUploadPanel() {
+      document.getElementById('uploadOverlay').classList.remove('active');
+      document.getElementById('uploadPanel').classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    function initUploadMap() {
+      uploadMap = new mapboxgl.Map({
+        container: 'uploadMap',
+        style: CONFIG.map.style,
+        center: CONFIG.map.center,
+        zoom: 4.5,
+        attributionControl: false,
+        interactive: true
+      });
+      uploadMap.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+      uploadMap.on('click', (e) => {
+        uploadLat = parseFloat(e.lngLat.lat.toFixed(6));
+        uploadLng = parseFloat(e.lngLat.lng.toFixed(6));
+        document.getElementById('displayLat').textContent = uploadLat;
+        document.getElementById('displayLng').textContent = uploadLng;
+        document.getElementById('pinMapHint').textContent = 'Pin placed — click again to move it';
+
+        // Place or move marker
+        if (uploadMarker) {
+          uploadMarker.setLngLat([uploadLng, uploadLat]);
+        } else {
+          const el = document.createElement('div');
+          el.style.cssText = 'width:28px;height:34px;cursor:pointer;';
+          el.innerHTML = `<svg viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 0C9.373 0 4 5.597 4 12.5c0 9.375 12 27.5 12 27.5S28 21.875 28 12.5C28 5.597 22.627 0 16 0z" fill="#4E9A8A" stroke="white" stroke-width="1.5"/>
+            <circle cx="16" cy="12" r="5" fill="white" opacity="0.9"/>
+            <circle cx="16" cy="12" r="2.5" fill="#3A5A52"/>
+          </svg>`;
+          uploadMarker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+            .setLngLat([uploadLng, uploadLat])
+            .addTo(uploadMap);
+        }
+      });
+    }
+
+    // ── File handling ─────────────────────────────────────────────
+    const audioFileInput = document.getElementById('audioFile');
+    const dropzone       = document.getElementById('dropzone');
+
+    audioFileInput.addEventListener('change', (e) => {
+      if (e.target.files[0]) handleFileSelect(e.target.files[0]);
+    });
+
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) handleFileSelect(e.dataTransfer.files[0]);
+    });
+
+    function handleFileSelect(file) {
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      if (file.size > maxSize) { alert('File is too large. Maximum size is 50MB.'); return; }
+      selectedFile = file;
+      document.getElementById('dropzone').style.display = 'none';
+      document.getElementById('fileSelected').style.display = 'flex';
+      document.getElementById('fileName').textContent = file.name;
+      document.getElementById('fileSize').textContent = (file.size / (1024*1024)).toFixed(1) + ' MB';
+    }
+
+    function clearFile() {
+      selectedFile = null;
+      audioFileInput.value = '';
+      document.getElementById('dropzone').style.display = 'block';
+      document.getElementById('fileSelected').style.display = 'none';
+    }
+
+    // ── Equipment other toggle ────────────────────────────────────
+    function toggleEquipmentOther() {
+      const val   = document.getElementById('uploadEquipment').value;
+      const other = document.getElementById('equipmentOther');
+      other.classList.toggle('visible', val === 'other');
+    }
+
+    // ── Type label helper ─────────────────────────────────────────
+    function getTypeLabel(type) {
+      return { nature: 'Nature', external: 'External Architectural', internal: 'Internal Architectural' }[type] || type;
+    }
+
+    // ── Submit upload ─────────────────────────────────────────────
+    async function submitUpload() {
+      // Validate required fields
+      const title        = document.getElementById('uploadTitle').value.trim();
+      const description  = document.getElementById('uploadDescription').value.trim();
+      const type         = document.getElementById('uploadType').value;
+      const locationType = document.getElementById('uploadLocationType').value;
+      const locationName = document.getElementById('uploadLocationName').value.trim();
+
+      if (!selectedFile)    { alert('Please select an audio file.'); return; }
+      if (!title)           { alert('Please enter a title.'); return; }
+      if (!description)     { alert('Please enter a description.'); return; }
+      if (!type)            { alert('Please select a sound type.'); return; }
+      if (!locationType)    { alert('Please select a location type.'); return; }
+      if (!locationName)    { alert('Please enter a location name.'); return; }
+      if (!uploadLat || !uploadLng) { alert('Please click the map to place your pin.'); return; }
+
+      // Optional fields
+      const recordedDate  = document.getElementById('uploadDate').value || null;
+      const contributor   = document.getElementById('uploadContributor').value.trim() || null;
+      const equipmentVal  = document.getElementById('uploadEquipment').value;
+      const equipment     = equipmentVal === 'other'
+        ? (document.getElementById('uploadEquipmentOther').value.trim() || null)
+        : (equipmentVal || null);
+
+      // Disable submit
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+
+      // Show progress
+      const statusEl = document.getElementById('uploadStatus');
+      statusEl.classList.add('visible');
+      setProgress(10, 'Uploading audio file…');
+
+      try {
+        // 1. Upload audio file to Supabase Storage
+        const ext      = selectedFile.name.split('.').pop();
+        const filename = `${Date.now()}_${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.${ext}`;
+        const { data: storageData, error: storageError } = await sb.storage
+          .from('Audio')
+          .upload(filename, selectedFile, { cacheControl: '3600', upsert: false });
+
+        if (storageError) throw new Error('Storage error: ' + storageError.message);
+        setProgress(60, 'Saving to archive…');
+
+        // 2. Get public URL
+        const { data: urlData } = sb.storage.from('Audio').getPublicUrl(filename);
+        const audioUrl = urlData.publicUrl;
+
+        setProgress(80, 'Saving record…');
+
+        // 3. Insert record into sounds table
+        const { error: dbError } = await sb.from('sounds').insert([{
+          title,
+          description,
+          type,
+          type_label:    getTypeLabel(type),
+          location_type: locationType,
+          location_name: locationName,
+          lat:           uploadLat,
+          lng:           uploadLng,
+          audio_url:     audioUrl,
+          recorded_date: recordedDate,
+          contributor,
+          equipment,
+          status:        'approved'
+        }]);
+
+        if (dbError) throw new Error('Database error: ' + dbError.message);
+        setProgress(100, 'Done!');
+
+        // 4. Show success
+        setTimeout(() => {
+          document.getElementById('uploadFormBody').style.display = 'none';
+          document.getElementById('uploadPanelFooter').style.display = 'none';
+          document.getElementById('uploadSuccess').classList.add('visible');
+          // Reload sounds on main map
+          loadSounds();
+        }, 400);
+
+      } catch (err) {
+        console.error('Upload error:', err);
+        alert('Upload failed: ' + err.message);
+        submitBtn.disabled = false;
+        statusEl.classList.remove('visible');
+        setProgress(0, '');
+      }
+    }
+
+    function setProgress(pct, text) {
+      document.getElementById('uploadProgressFill').style.width = pct + '%';
+      document.getElementById('uploadStatusText').textContent   = text;
+    }
+
+    function resetUploadForm() {
+      // Reset all fields
+      document.getElementById('uploadTitle').value       = '';
+      document.getElementById('uploadDescription').value = '';
+      document.getElementById('uploadType').value        = '';
+      document.getElementById('uploadLocationType').value= '';
+      document.getElementById('uploadLocationName').value= '';
+      document.getElementById('uploadDate').value        = '';
+      document.getElementById('uploadContributor').value = '';
+      document.getElementById('uploadEquipment').value   = '';
+      document.getElementById('uploadEquipmentOther').value = '';
+      document.getElementById('equipmentOther').classList.remove('visible');
+      clearFile();
+      uploadLat = null; uploadLng = null;
+      document.getElementById('displayLat').textContent = '—';
+      document.getElementById('displayLng').textContent = '—';
+      document.getElementById('pinMapHint').textContent = 'Click anywhere on the map to place your pin';
+      if (uploadMarker) { uploadMarker.remove(); uploadMarker = null; }
+
+      // Reset UI state
+      document.getElementById('uploadFormBody').style.display = '';
+      document.getElementById('uploadPanelFooter').style.display = '';
+      document.getElementById('uploadSuccess').classList.remove('visible');
+      document.getElementById('uploadStatus').classList.remove('visible');
+      document.getElementById('submitBtn').disabled = false;
+      setProgress(0, '');
+
+      // Scroll form back to top
+      document.getElementById('uploadFormBody').scrollTop = 0;
+    }
   </script>
 </body>
 </html>
+
