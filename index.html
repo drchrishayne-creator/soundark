@@ -509,7 +509,7 @@ Output
 
     // ── Audio ─────────────────────────────────────────────────────
     function togglePlay() {
-      if (!currentSound || !currentSound.audio) {
+      if (!currentSound || !currentSound.audio_url) {
         isPlaying = !isPlaying;
         updatePlayBtn();
         animateWaveform(isPlaying);
