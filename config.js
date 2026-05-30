@@ -26,6 +26,7 @@ const CONFIG = {
     style:  'mapbox://styles/mapbox/outdoors-v12',
     center: [-2.5, 52.5],   // Default map centre (UK)
     zoom:   5.5              // Default zoom level
-  }
-
+  },
+  inviteCode: 'soundArk2026',
+  adminEmail: 'chris.hayne@icloud.com'
 };
