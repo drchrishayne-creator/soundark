@@ -14,6 +14,9 @@
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+  <!-- heic2any — HEIC/HEIF to JPEG conversion in the browser -->
+  <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -106,7 +109,11 @@
     .sound-panel { position: absolute; top: 1.25rem; right: 1.25rem; width: 300px; background: rgba(242,248,246,0.98); border: 1px solid rgba(92,122,94,0.25); border-radius: 6px; box-shadow: 0 8px 40px rgba(30,43,31,0.28), 0 2px 8px rgba(30,43,31,0.15); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); overflow: hidden; z-index: 10; display: none; animation: panelIn 0.25s ease; }
     .sound-panel.active { display: block; }
     @keyframes panelIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-    .panel-img-placeholder { width: 100%; height: 130px; background: linear-gradient(135deg, var(--forest) 0%, var(--forest-mid) 100%); display: flex; align-items: center; justify-content: center; }
+
+    /* Panel header — image or gradient fallback */
+    .panel-img-area { width: 100%; height: 130px; background: linear-gradient(135deg, var(--forest) 0%, var(--forest-mid) 100%); display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; flex-shrink: 0; }
+    .panel-img-area img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
     .panel-body { padding: 1rem 1.1rem; }
     .panel-type { font-size: 0.65rem; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--moss); margin-bottom: 0.3rem; }
     .panel-title { font-family: var(--font-display); font-size: 1rem; font-weight: 600; color: var(--forest); margin-bottom: 0.25rem; line-height: 1.3; }
@@ -123,9 +130,14 @@
     .audio-duration { font-size: 0.7rem; color: var(--slate-mid); }
     .audio-progress { height: 3px; background: var(--parchment-dk); border-radius: 2px; margin-top: 4px; position: relative; cursor: pointer; }
     .audio-progress-fill { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; transition: width 0.1s linear; }
-    .panel-footer { padding: 0.6rem 1.1rem; background: var(--parchment-dk); border-top: 1px solid rgba(92,122,94,0.15); display: flex; align-items: center; justify-content: space-between; }
+
+    /* Panel footer — contributor, date, audio meta */
+    .panel-footer { padding: 0.5rem 1.1rem 0.6rem; background: var(--parchment-dk); border-top: 1px solid rgba(92,122,94,0.15); }
+    .panel-footer-row { display: flex; align-items: center; justify-content: space-between; }
     .panel-date { font-size: 0.65rem; color: var(--slate-mid); }
     .panel-contributor { font-size: 0.65rem; color: var(--moss); font-weight: 500; }
+    .panel-audio-meta { font-size: 0.61rem; color: var(--slate-mid); font-family: monospace; letter-spacing: 0.02em; margin-top: 0.2rem; opacity: 0.75; }
+
     .panel-close { position: absolute; top: 0.6rem; right: 0.6rem; width: 26px; height: 26px; border-radius: 50%; background: rgba(30,43,31,0.5); display: flex; align-items: center; justify-content: center; transition: background var(--transition); z-index: 1; }
     .panel-close:hover { background: rgba(30,43,31,0.8); }
     .panel-close svg { color: white; }
@@ -194,131 +206,67 @@
     .mapboxgl-ctrl-attrib-inner { background: rgba(242,248,246,0.95); padding: 2px 6px; border-radius: 3px; }
 
     /* ── Upload Panel ── */
-    .upload-overlay {
-      position: fixed; inset: 0; z-index: 2000;
-      background: rgba(30,43,31,0.5);
-      backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
-      opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
-    }
+    .upload-overlay { position: fixed; inset: 0; z-index: 2000; background: rgba(30,43,31,0.5); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
     .upload-overlay.active { opacity: 1; pointer-events: all; }
-    .upload-panel {
-      position: fixed; top: 0; right: 0; bottom: 0; z-index: 2001;
-      width: 480px; max-width: 100vw;
-      background: var(--cream);
-      box-shadow: -8px 0 48px rgba(30,43,31,0.3);
-      display: flex; flex-direction: column;
-      transform: translateX(100%);
-      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-      overflow: hidden;
-    }
+    .upload-panel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 2001; width: 480px; max-width: 100vw; background: var(--cream); box-shadow: -8px 0 48px rgba(30,43,31,0.3); display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; }
     .upload-panel.active { transform: translateX(0); }
-    .upload-panel-header {
-      background: var(--forest); padding: 1.25rem 1.5rem;
-      display: flex; align-items: center; justify-content: space-between;
-      flex-shrink: 0; border-bottom: 1px solid rgba(78,154,138,0.2);
-    }
-    .upload-panel-header h2 {
-      font-family: var(--font-display); font-size: 1.1rem; font-weight: 600;
-      color: var(--parchment); display: flex; align-items: center; gap: 0.6rem;
-    }
+    .upload-panel-header { background: var(--forest); padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; border-bottom: 1px solid rgba(78,154,138,0.2); }
+    .upload-panel-header h2 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; color: var(--parchment); display: flex; align-items: center; gap: 0.6rem; }
     .upload-panel-header h2 svg { color: var(--accent-light); }
-    .upload-panel-close {
-      width: 32px; height: 32px; border-radius: 50%;
-      background: rgba(255,255,255,0.1);
-      display: flex; align-items: center; justify-content: center;
-      transition: background var(--transition); color: var(--parchment);
-    }
+    .upload-panel-close { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; transition: background var(--transition); color: var(--parchment); }
     .upload-panel-close:hover { background: rgba(255,255,255,0.2); }
-    .upload-panel-body {
-      flex: 1; overflow-y: auto; padding: 1.5rem;
-      display: flex; flex-direction: column; gap: 1.25rem;
-    }
+    .upload-panel-body { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
     .upload-panel-body::-webkit-scrollbar { width: 4px; }
     .upload-panel-body::-webkit-scrollbar-track { background: transparent; }
     .upload-panel-body::-webkit-scrollbar-thumb { background: var(--parchment-dk); border-radius: 2px; }
-    .upload-section-label {
-      font-size: 0.65rem; font-weight: 600; letter-spacing: 0.15em;
-      text-transform: uppercase; color: var(--moss);
-      padding-bottom: 0.5rem; border-bottom: 1px solid var(--parchment-dk); margin-bottom: 0.25rem;
-    }
+    .upload-section-label { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--moss); padding-bottom: 0.5rem; border-bottom: 1px solid var(--parchment-dk); margin-bottom: 0.25rem; }
     .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
     .form-group label { font-size: 0.78rem; font-weight: 500; color: var(--slate); display: flex; align-items: center; gap: 0.3rem; }
     .form-group label .required { color: var(--accent); font-size: 0.7rem; }
-    .form-input, .form-select, .form-textarea {
-      width: 100%; padding: 0.6rem 0.8rem;
-      font-family: var(--font-sans); font-size: 0.85rem;
-      background: var(--white); color: var(--slate);
-      border: 1px solid rgba(92,122,94,0.25); border-radius: var(--radius);
-      outline: none; transition: border-color var(--transition), box-shadow var(--transition);
-    }
-    .form-input:focus, .form-select:focus, .form-textarea:focus {
-      border-color: var(--accent); box-shadow: 0 0 0 3px rgba(78,154,138,0.12);
-    }
+    .form-input, .form-select, .form-textarea { width: 100%; padding: 0.6rem 0.8rem; font-family: var(--font-sans); font-size: 0.85rem; background: var(--white); color: var(--slate); border: 1px solid rgba(92,122,94,0.25); border-radius: var(--radius); outline: none; transition: border-color var(--transition), box-shadow var(--transition); }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(78,154,138,0.12); }
     .form-input::placeholder, .form-textarea::placeholder { color: #aaa; }
     .form-textarea { resize: vertical; min-height: 80px; line-height: 1.55; }
-    .form-select {
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235C7A5E' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 0.75rem center;
-      padding-right: 2.2rem; cursor: pointer;
-    }
+    .form-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235C7A5E' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2.2rem; cursor: pointer; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
 
-    /* ── File drop zone ── */
-    .file-dropzone {
-      border: 2px dashed rgba(78,154,138,0.35); border-radius: 6px;
-      background: rgba(78,154,138,0.04); padding: 1.5rem 1rem; text-align: center;
-      cursor: pointer; transition: all var(--transition); position: relative;
-    }
+    /* ── File drop zones ── */
+    .file-dropzone { border: 2px dashed rgba(78,154,138,0.35); border-radius: 6px; background: rgba(78,154,138,0.04); padding: 1.5rem 1rem; text-align: center; cursor: pointer; transition: all var(--transition); position: relative; }
     .file-dropzone:hover, .file-dropzone.dragover { border-color: var(--accent); background: rgba(78,154,138,0.08); }
     .file-dropzone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
     .file-dropzone-icon { color: var(--accent); margin: 0 auto 0.5rem; display: block; }
     .file-dropzone-text { font-size: 0.82rem; color: var(--slate-mid); line-height: 1.5; }
     .file-dropzone-text strong { color: var(--accent); }
     .file-dropzone-hint { font-size: 0.72rem; color: #aaa; margin-top: 0.25rem; }
-    .file-selected {
-      display: flex; align-items: flex-start; gap: 0.6rem;
-      background: rgba(78,154,138,0.08); border: 1px solid rgba(78,154,138,0.25);
-      border-radius: var(--radius); padding: 0.6rem 0.8rem;
-      font-size: 0.82rem; color: var(--forest);
-    }
+
+    /* Audio selected */
+    .file-selected { display: flex; align-items: flex-start; gap: 0.6rem; background: rgba(78,154,138,0.08); border: 1px solid rgba(78,154,138,0.25); border-radius: var(--radius); padding: 0.6rem 0.8rem; font-size: 0.82rem; color: var(--forest); }
     .file-selected svg { color: var(--accent); flex-shrink: 0; margin-top: 2px; }
     .file-selected-info { flex: 1; min-width: 0; }
     .file-selected-top { display: flex; align-items: center; gap: 0.5rem; }
     .file-selected-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
     .file-selected-size { color: var(--slate-mid); font-size: 0.72rem; flex-shrink: 0; }
-    .file-audio-meta {
-      margin-top: 0.35rem;
-      font-size: 0.68rem; color: var(--slate-mid);
-      font-family: monospace; letter-spacing: 0.02em;
-      line-height: 1.5;
-    }
+    .file-audio-meta { margin-top: 0.35rem; font-size: 0.68rem; color: var(--slate-mid); font-family: monospace; letter-spacing: 0.02em; line-height: 1.5; }
     .file-audio-meta.loading { color: #aaa; font-style: italic; font-family: var(--font-sans); }
     .file-clear { color: var(--slate-mid); transition: color var(--transition); flex-shrink: 0; }
     .file-clear:hover { color: #c0392b; }
+
+    /* Image selected */
+    .img-selected { display: flex; align-items: center; gap: 0.75rem; background: rgba(78,154,138,0.08); border: 1px solid rgba(78,154,138,0.25); border-radius: var(--radius); padding: 0.6rem 0.8rem; }
+    .img-preview { width: 56px; height: 56px; border-radius: 3px; object-fit: cover; border: 1px solid rgba(92,122,94,0.2); flex-shrink: 0; }
+    .img-selected-info { flex: 1; min-width: 0; }
+    .img-selected-name { font-size: 0.82rem; font-weight: 500; color: var(--forest); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .img-selected-meta { font-size: 0.7rem; color: var(--slate-mid); margin-top: 2px; }
 
     /* ── Location search ── */
     .location-search-wrap { position: relative; }
     .location-search-input-row { display: flex; gap: 0.5rem; }
     .location-search-input-row .form-input { flex: 1; }
-    .btn-geocode {
-      padding: 0.6rem 0.9rem; background: var(--forest-mid); color: var(--white);
-      border-radius: var(--radius); font-size: 0.78rem; font-weight: 500;
-      white-space: nowrap; transition: background var(--transition); flex-shrink: 0;
-    }
+    .btn-geocode { padding: 0.6rem 0.9rem; background: var(--forest-mid); color: var(--white); border-radius: var(--radius); font-size: 0.78rem; font-weight: 500; white-space: nowrap; transition: background var(--transition); flex-shrink: 0; }
     .btn-geocode:hover { background: var(--moss); }
-    .geocode-results {
-      position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
-      background: var(--white); border: 1px solid rgba(92,122,94,0.25);
-      border-radius: var(--radius); box-shadow: 0 4px 20px rgba(30,43,31,0.15);
-      max-height: 200px; overflow-y: auto; display: none;
-    }
+    .geocode-results { position: absolute; top: 100%; left: 0; right: 0; z-index: 100; background: var(--white); border: 1px solid rgba(92,122,94,0.25); border-radius: var(--radius); box-shadow: 0 4px 20px rgba(30,43,31,0.15); max-height: 200px; overflow-y: auto; display: none; }
     .geocode-results.visible { display: block; }
-    .geocode-result-item {
-      padding: 0.6rem 0.9rem; font-size: 0.82rem; color: var(--slate);
-      cursor: pointer; border-bottom: 1px solid var(--parchment-dk);
-      transition: background var(--transition);
-    }
+    .geocode-result-item { padding: 0.6rem 0.9rem; font-size: 0.82rem; color: var(--slate); cursor: pointer; border-bottom: 1px solid var(--parchment-dk); transition: background var(--transition); }
     .geocode-result-item:last-child { border-bottom: none; }
     .geocode-result-item:hover { background: var(--parchment); }
     .geocode-result-place { font-weight: 500; }
@@ -327,38 +275,20 @@
     /* ── Manual coords ── */
     .manual-coords-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem; align-items: end; }
     .manual-coords-label { font-size: 0.7rem; color: var(--slate-mid); margin-bottom: 0.25rem; }
-    .btn-go {
-      padding: 0.6rem 0.9rem; background: var(--accent); color: var(--white);
-      border-radius: var(--radius); font-size: 0.78rem; font-weight: 500;
-      transition: background var(--transition);
-    }
+    .btn-go { padding: 0.6rem 0.9rem; background: var(--accent); color: var(--white); border-radius: var(--radius); font-size: 0.78rem; font-weight: 500; transition: background var(--transition); }
     .btn-go:hover { background: var(--forest-mid); }
 
     /* ── Mini map ── */
     .pin-map-wrap { border: 1px solid rgba(92,122,94,0.25); border-radius: var(--radius); overflow: hidden; position: relative; }
     #uploadMap { width: 100%; height: 200px; }
-    .pin-map-hint {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      background: rgba(42,63,58,0.85); color: var(--parchment);
-      font-size: 0.7rem; text-align: center; padding: 0.35rem;
-      pointer-events: none; letter-spacing: 0.04em;
-    }
+    .pin-map-hint { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(42,63,58,0.85); color: var(--parchment); font-size: 0.7rem; text-align: center; padding: 0.35rem; pointer-events: none; letter-spacing: 0.04em; }
     .pin-coords { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem; }
-    .pin-coord-display {
-      background: var(--white); border: 1px solid rgba(92,122,94,0.25);
-      border-radius: var(--radius); padding: 0.45rem 0.7rem;
-      font-size: 0.78rem; color: var(--slate-mid); display: flex; align-items: center; gap: 0.4rem;
-    }
+    .pin-coord-display { background: var(--white); border: 1px solid rgba(92,122,94,0.25); border-radius: var(--radius); padding: 0.45rem 0.7rem; font-size: 0.78rem; color: var(--slate-mid); display: flex; align-items: center; gap: 0.4rem; }
     .pin-coord-display span { font-family: monospace; color: var(--forest); font-weight: 500; }
 
-    /* ── Location method tabs ── */
+    /* ── Location tabs ── */
     .loc-tabs { display: flex; gap: 0; margin-bottom: 0.75rem; border: 1px solid rgba(92,122,94,0.25); border-radius: var(--radius); overflow: hidden; }
-    .loc-tab {
-      flex: 1; padding: 0.45rem 0.5rem; font-size: 0.72rem; font-weight: 500;
-      text-align: center; letter-spacing: 0.04em; color: var(--slate-mid);
-      background: var(--white); border-right: 1px solid rgba(92,122,94,0.25);
-      transition: background var(--transition), color var(--transition); cursor: pointer;
-    }
+    .loc-tab { flex: 1; padding: 0.45rem 0.5rem; font-size: 0.72rem; font-weight: 500; text-align: center; letter-spacing: 0.04em; color: var(--slate-mid); background: var(--white); border-right: 1px solid rgba(92,122,94,0.25); transition: background var(--transition), color var(--transition); cursor: pointer; }
     .loc-tab:last-child { border-right: none; }
     .loc-tab.active { background: var(--forest-mid); color: var(--white); }
     .loc-tab-panel { display: none; }
@@ -369,23 +299,11 @@
     .equipment-other.visible { display: block; }
 
     /* ── Upload footer ── */
-    .upload-panel-footer {
-      padding: 1rem 1.5rem; background: var(--parchment);
-      border-top: 1px solid var(--parchment-dk); display: flex; gap: 0.75rem; flex-shrink: 0;
-    }
-    .btn-submit {
-      flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-      font-size: 0.82rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-      color: var(--white); background: var(--accent); padding: 0.75rem 1.5rem;
-      border-radius: var(--radius); transition: background var(--transition);
-    }
+    .upload-panel-footer { padding: 1rem 1.5rem; background: var(--parchment); border-top: 1px solid var(--parchment-dk); display: flex; gap: 0.75rem; flex-shrink: 0; }
+    .btn-submit { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-size: 0.82rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--white); background: var(--accent); padding: 0.75rem 1.5rem; border-radius: var(--radius); transition: background var(--transition); }
     .btn-submit:hover:not(:disabled) { background: var(--forest-mid); }
     .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-    .btn-cancel {
-      font-size: 0.82rem; font-weight: 500; color: var(--slate-mid);
-      padding: 0.75rem 1.2rem; border-radius: var(--radius);
-      background: var(--parchment-dk); transition: background var(--transition);
-    }
+    .btn-cancel { font-size: 0.82rem; font-weight: 500; color: var(--slate-mid); padding: 0.75rem 1.2rem; border-radius: var(--radius); background: var(--parchment-dk); transition: background var(--transition); }
     .btn-cancel:hover { background: var(--parchment-dk); color: var(--forest); }
 
     /* ── Upload progress ── */
@@ -501,7 +419,8 @@
         <button class="panel-close" onclick="closePanel()">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
-        <div class="panel-img-placeholder" id="panelImg">
+        <!-- Header image area -->
+        <div class="panel-img-area" id="panelImgArea">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(78,154,138,0.4)" stroke-width="1"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
         </div>
         <div class="panel-body">
@@ -526,8 +445,11 @@
           </div>
         </div>
         <div class="panel-footer">
-          <span class="panel-contributor" id="panelContributor"></span>
-          <span class="panel-date" id="panelDate">—</span>
+          <div class="panel-footer-row">
+            <span class="panel-contributor" id="panelContributor"></span>
+            <span class="panel-date" id="panelDate">—</span>
+          </div>
+          <div class="panel-audio-meta" id="panelAudioMeta"></div>
         </div>
       </div>
 
@@ -564,26 +486,10 @@
         <p>Each recording is precisely geolocated, time-stamped and catalogued. Together they form a living document of the world's sonic environments — many of which are changing, or may be lost.</p>
       </div>
       <div class="about-stats">
-        <div class="stat-card">
-          <div class="stat-number">9</div>
-          <div class="stat-label">Recordings</div>
-          <div class="stat-desc">and growing — from cathedrals to coastlines</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number">5</div>
-          <div class="stat-label">Countries</div>
-          <div class="stat-desc">contributing to the archive so far</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number">3</div>
-          <div class="stat-label">Sound Types</div>
-          <div class="stat-desc">nature, external and internal architectural</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number">Open</div>
-          <div class="stat-label">Access</div>
-          <div class="stat-desc">freely available for listening and research</div>
-        </div>
+        <div class="stat-card"><div class="stat-number">9</div><div class="stat-label">Recordings</div><div class="stat-desc">and growing — from cathedrals to coastlines</div></div>
+        <div class="stat-card"><div class="stat-number">5</div><div class="stat-label">Countries</div><div class="stat-desc">contributing to the archive so far</div></div>
+        <div class="stat-card"><div class="stat-number">3</div><div class="stat-label">Sound Types</div><div class="stat-desc">nature, external and internal architectural</div></div>
+        <div class="stat-card"><div class="stat-number">Open</div><div class="stat-label">Access</div><div class="stat-desc">freely available for listening and research</div></div>
       </div>
     </div>
   </section>
@@ -598,25 +504,19 @@
       <div class="steps">
         <div class="step">
           <div class="step-number">01</div>
-          <div class="step-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-          </div>
+          <div class="step-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></div>
           <h3>Record a Sound</h3>
           <p>Use your phone or any device with a microphone to capture an ambient sound — no speech, no music, just the acoustic character of a place. Up to one minute, in WAV, MPEG or AIFF format.</p>
         </div>
         <div class="step">
           <div class="step-number">02</div>
-          <div class="step-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          </div>
+          <div class="step-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
           <h3>Locate &amp; Describe</h3>
           <p>Pin your recording to its exact location — tap the map, search a place name, or enter coordinates. Add a short description and sound type.</p>
         </div>
         <div class="step">
           <div class="step-number">03</div>
-          <div class="step-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-          </div>
+          <div class="step-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></div>
           <h3>Share with the World</h3>
           <p>Your recording joins the archive — freely accessible to listeners, researchers and anyone curious about the acoustic world around them.</p>
         </div>
@@ -628,10 +528,8 @@
   <footer>
     <div class="footer-logo">The SoundArk</div>
     <ul class="footer-links">
-      <li><a href="#">About</a></li>
-      <li><a href="#">Privacy</a></li>
-      <li><a href="#">Terms</a></li>
-      <li><a href="#">Contact</a></li>
+      <li><a href="#">About</a></li><li><a href="#">Privacy</a></li>
+      <li><a href="#">Terms</a></li><li><a href="#">Contact</a></li>
     </ul>
     <p class="footer-copy">&copy; 2025 The SoundArk Project · thesoundark.org.uk</p>
   </footer>
@@ -670,7 +568,28 @@
             </div>
             <div class="file-audio-meta loading" id="fileAudioMeta">Analysing…</div>
           </div>
-          <button class="file-clear" onclick="clearFile()" title="Remove file">
+          <button class="file-clear" onclick="clearAudioFile()" title="Remove file">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Image file (optional) -->
+      <div>
+        <div class="upload-section-label">Location Image <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--slate-mid);font-size:0.72rem;">— optional</span></div>
+        <div class="file-dropzone" id="imgDropzone">
+          <input type="file" id="imageFile" accept="image/jpeg,image/png,image/webp,.heic,.heif" />
+          <svg class="file-dropzone-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <p class="file-dropzone-text"><strong>Choose an image</strong> or drag it here</p>
+          <p class="file-dropzone-hint">JPG, PNG, WEBP or HEIC · resized to 600×600px</p>
+        </div>
+        <div class="img-selected" id="imgSelected" style="display:none;">
+          <img class="img-preview" id="imgPreview" src="" alt="Preview" />
+          <div class="img-selected-info">
+            <div class="img-selected-name" id="imgName"></div>
+            <div class="img-selected-meta" id="imgMeta">Will be resized to 600×600px JPEG</div>
+          </div>
+          <button class="file-clear" onclick="clearImageFile()" title="Remove image">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
           </button>
         </div>
@@ -747,8 +666,6 @@
             <label>Location Name <span class="required">*</span></label>
             <input class="form-input" type="text" id="uploadLocationName" placeholder="e.g. Salisbury Cathedral, Wiltshire" maxlength="120" />
           </div>
-
-          <!-- Pin placement tabs -->
           <div class="form-group">
             <label>Pin on Map <span class="required">*</span></label>
             <div class="loc-tabs">
@@ -756,8 +673,6 @@
               <button class="loc-tab" onclick="switchLocTab('coords', this)">Enter Coords</button>
               <button class="loc-tab" onclick="switchLocTab('map', this)">Click Map</button>
             </div>
-
-            <!-- Tab: Search -->
             <div class="loc-tab-panel active" id="locTabSearch">
               <div class="location-search-wrap">
                 <div class="location-search-input-row">
@@ -767,8 +682,6 @@
                 <div class="geocode-results" id="geocodeResults"></div>
               </div>
             </div>
-
-            <!-- Tab: Manual coords -->
             <div class="loc-tab-panel" id="locTabCoords">
               <div class="manual-coords-row">
                 <div>
@@ -782,13 +695,9 @@
                 <button class="btn-go" onclick="applyManualCoords()">Go</button>
               </div>
             </div>
-
-            <!-- Tab: Click map -->
             <div class="loc-tab-panel" id="locTabMap">
               <p style="font-size:0.75rem;color:var(--slate-mid);margin-bottom:0.5rem;">Click anywhere on the map below to place your pin.</p>
             </div>
-
-            <!-- Mini map (always visible below tabs) -->
             <div class="pin-map-wrap" style="margin-top:0.5rem;">
               <div id="uploadMap"></div>
               <div class="pin-map-hint" id="pinMapHint">Click the map or use Search / Enter Coords above</div>
@@ -828,6 +737,9 @@
     </div>
   </div>
 
+  <!-- Hidden canvas for image resizing -->
+  <canvas id="resizeCanvas" style="display:none;"></canvas>
+
   <audio id="audioPlayer" preload="none"></audio>
 
   <script>
@@ -836,15 +748,15 @@
 
     // ── Placeholders ──────────────────────────────────────────────
     const placeholderSounds = [
-      { id:1, title:"Tate Modern — Turbine Hall", type:"internal", type_label:"Internal Architectural", location_type:"cultural", location_name:"London, UK", description:"The vast acoustic space of the Turbine Hall on a busy Saturday morning.", recorded_date:"March 2024", lat:51.5076, lng:-0.0994, audio_url:null },
-      { id:2, title:"Wells Cathedral Nave", type:"internal", type_label:"Internal Architectural", location_type:"ecclesiastical", location_name:"Wells, Somerset", description:"Early morning resonance in the nave — footsteps on stone, distant organ drone.", recorded_date:"January 2024", lat:51.2092, lng:-2.6437, audio_url:null },
-      { id:3, title:"Knepp Estate — Dawn Chorus", type:"nature", type_label:"Nature", location_type:"field", location_name:"Knepp, West Sussex", description:"Pre-dawn on the rewilded meadows — wind through long grass, distant water.", recorded_date:"May 2024", lat:51.0012, lng:-0.3156, audio_url:null },
-      { id:4, title:"Seven Sisters — Chalk Shore", type:"nature", type_label:"Nature", location_type:"coastal", location_name:"East Sussex", description:"Waves breaking on flint and chalk — the characteristic acoustic of the Sussex coast.", recorded_date:"April 2024", lat:50.7449, lng:0.1785, audio_url:null },
-      { id:5, title:"Cheddar Gorge Cave System", type:"internal", type_label:"Internal Architectural", location_type:"cave", location_name:"Cheddar, Somerset", description:"Deep in the cave network — dripping water, extraordinary natural reverb.", recorded_date:"February 2024", lat:51.2861, lng:-2.7782, audio_url:null },
-      { id:6, title:"Dartmoor — Wistman's Wood", type:"nature", type_label:"Nature", location_type:"forest", location_name:"Dartmoor, Devon", description:"Ancient oak forest on open moorland — wind, lichen, silence punctuated by moorland birds.", recorded_date:"June 2024", lat:50.6053, lng:-3.9305, audio_url:null },
-      { id:7, title:"Forth Bridge — Steel Resonance", type:"external", type_label:"External Architectural", location_type:"industrial", location_name:"South Queensferry, Scotland", description:"Wind resonating through the Victorian steel cantilever structure.", recorded_date:"July 2024", lat:55.9988, lng:-3.3878, audio_url:null },
-      { id:8, title:"Cattedrale di San Lorenzo", type:"internal", type_label:"Internal Architectural", location_type:"ecclesiastical", location_name:"Genova, Italy", description:"The resonant interior of Genova's medieval cathedral — stone acoustics, distant footsteps.", recorded_date:"2024", lat:44.4078, lng:8.9309, audio_url:null },
-      { id:9, title:"Manchester Cathedral", type:"internal", type_label:"Internal Architectural", location_type:"ecclesiastical", location_name:"Manchester, UK", description:"The intimate medieval nave of Manchester Cathedral — warm stone acoustics.", recorded_date:"2024", lat:53.4839, lng:-2.2441, audio_url:null }
+      { id:1, title:"Tate Modern — Turbine Hall", type:"internal", type_label:"Internal Architectural", location_type:"cultural", location_name:"London, UK", description:"The vast acoustic space of the Turbine Hall on a busy Saturday morning.", recorded_date:"March 2024", lat:51.5076, lng:-0.0994, audio_url:null, image_url:null, audio_meta:null },
+      { id:2, title:"Wells Cathedral Nave", type:"internal", type_label:"Internal Architectural", location_type:"ecclesiastical", location_name:"Wells, Somerset", description:"Early morning resonance in the nave — footsteps on stone, distant organ drone.", recorded_date:"January 2024", lat:51.2092, lng:-2.6437, audio_url:null, image_url:null, audio_meta:null },
+      { id:3, title:"Knepp Estate — Dawn Chorus", type:"nature", type_label:"Nature", location_type:"field", location_name:"Knepp, West Sussex", description:"Pre-dawn on the rewilded meadows — wind through long grass, distant water.", recorded_date:"May 2024", lat:51.0012, lng:-0.3156, audio_url:null, image_url:null, audio_meta:null },
+      { id:4, title:"Seven Sisters — Chalk Shore", type:"nature", type_label:"Nature", location_type:"coastal", location_name:"East Sussex", description:"Waves breaking on flint and chalk — the characteristic acoustic of the Sussex coast.", recorded_date:"April 2024", lat:50.7449, lng:0.1785, audio_url:null, image_url:null, audio_meta:null },
+      { id:5, title:"Cheddar Gorge Cave System", type:"internal", type_label:"Internal Architectural", location_type:"cave", location_name:"Cheddar, Somerset", description:"Deep in the cave network — dripping water, extraordinary natural reverb.", recorded_date:"February 2024", lat:51.2861, lng:-2.7782, audio_url:null, image_url:null, audio_meta:null },
+      { id:6, title:"Dartmoor — Wistman's Wood", type:"nature", type_label:"Nature", location_type:"forest", location_name:"Dartmoor, Devon", description:"Ancient oak forest on open moorland — wind, lichen, silence punctuated by moorland birds.", recorded_date:"June 2024", lat:50.6053, lng:-3.9305, audio_url:null, image_url:null, audio_meta:null },
+      { id:7, title:"Forth Bridge — Steel Resonance", type:"external", type_label:"External Architectural", location_type:"industrial", location_name:"South Queensferry, Scotland", description:"Wind resonating through the Victorian steel cantilever structure.", recorded_date:"July 2024", lat:55.9988, lng:-3.3878, audio_url:null, image_url:null, audio_meta:null },
+      { id:8, title:"Cattedrale di San Lorenzo", type:"internal", type_label:"Internal Architectural", location_type:"ecclesiastical", location_name:"Genova, Italy", description:"The resonant interior of Genova's medieval cathedral — stone acoustics, distant footsteps.", recorded_date:"2024", lat:44.4078, lng:8.9309, audio_url:null, image_url:null, audio_meta:null },
+      { id:9, title:"Manchester Cathedral", type:"internal", type_label:"Internal Architectural", location_type:"ecclesiastical", location_name:"Manchester, UK", description:"The intimate medieval nave of Manchester Cathedral — warm stone acoustics.", recorded_date:"2024", lat:53.4839, lng:-2.2441, audio_url:null, image_url:null, audio_meta:null }
     ];
 
     let allSounds = [], filteredSounds = [], currentSound = null;
@@ -889,12 +801,27 @@
       document.getElementById('panelDesc').textContent = sound.description;
       document.getElementById('panelDate').textContent = sound.recorded_date || sound.date || '';
       document.getElementById('panelContributor').textContent = sound.contributor ? '@ ' + sound.contributor : '';
+
+      // Audio meta
+      const metaEl = document.getElementById('panelAudioMeta');
+      metaEl.textContent = sound.audio_meta || '';
+      metaEl.style.display = sound.audio_meta ? 'block' : 'none';
+
+      // Header image or fallback
+      const imgArea = document.getElementById('panelImgArea');
+      if (sound.image_url) {
+        imgArea.innerHTML = `<img src="${sound.image_url}" alt="${sound.title.replace(/"/g,'&quot;')}" onerror="this.parentElement.innerHTML='<svg width=\\'48\\' height=\\'48\\' viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'rgba(78,154,138,0.4)\\' stroke-width=\\'1\\'><path d=\\'M9 18V5l12-2v13\\'/><circle cx=\\'6\\' cy=\\'18\\' r=\\'3\\'/><circle cx=\\'18\\' cy=\\'16\\' r=\\'3\\'/></svg>'" />`;
+      } else {
+        imgArea.innerHTML = `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(78,154,138,0.4)" stroke-width="1"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`;
+      }
+
       stopAudio();
       audioEl.src = sound.audio_url || sound.audio || '';
       document.getElementById('audioDuration').textContent = '0:00 / 0:00';
       document.getElementById('progressFill').style.width = '0%';
       buildWaveform();
     }
+
     function closePanel() {
       document.getElementById('soundPanel').classList.remove('active');
       stopAudio(); currentSound = null;
@@ -1023,7 +950,8 @@
     // ── Upload panel state ────────────────────────────────────────
     let uploadMap = null, uploadMarker = null;
     let uploadLat = null, uploadLng = null;
-    let selectedFile = null;
+    let selectedFile = null, selectedImageFile = null;
+    let audioMetaString = '';
 
     function openUploadPanel() {
       document.getElementById('uploadOverlay').classList.add('active');
@@ -1101,14 +1029,12 @@
           const item = document.createElement('div');
           item.className = 'geocode-result-item';
           const placeName = f.text || f.place_name.split(',')[0];
-          const context   = f.place_name;
-          item.innerHTML  = `<div class="geocode-result-place">${placeName}</div><div class="geocode-result-context">${context}</div>`;
+          item.innerHTML  = `<div class="geocode-result-place">${placeName}</div><div class="geocode-result-context">${f.place_name}</div>`;
           item.addEventListener('click', () => {
             const [lng, lat] = f.center;
             placePin(parseFloat(lat.toFixed(6)), parseFloat(lng.toFixed(6)));
             document.getElementById('geocodeInput').value = f.place_name;
             resultsEl.classList.remove('visible');
-            // Auto-fill location name if empty
             if (!document.getElementById('uploadLocationName').value) {
               document.getElementById('uploadLocationName').value = f.place_name;
             }
@@ -1131,19 +1057,19 @@
       placePin(parseFloat(lat.toFixed(6)), parseFloat(lng.toFixed(6)));
     }
 
-    // ── File handling + audio metadata ────────────────────────────
+    // ── Audio file handling ───────────────────────────────────────
     const audioFileInput = document.getElementById('audioFile');
     const dropzone       = document.getElementById('dropzone');
 
-    audioFileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFileSelect(e.target.files[0]); });
+    audioFileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleAudioFileSelect(e.target.files[0]); });
     dropzone.addEventListener('dragover',  (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
     dropzone.addEventListener('dragleave', ()  => dropzone.classList.remove('dragover'));
     dropzone.addEventListener('drop', (e) => {
       e.preventDefault(); dropzone.classList.remove('dragover');
-      if (e.dataTransfer.files[0]) handleFileSelect(e.dataTransfer.files[0]);
+      if (e.dataTransfer.files[0]) handleAudioFileSelect(e.dataTransfer.files[0]);
     });
 
-    function handleFileSelect(file) {
+    function handleAudioFileSelect(file) {
       if (file.size > 50 * 1024 * 1024) { alert('File is too large. Maximum size is 50MB.'); return; }
       selectedFile = file;
       document.getElementById('dropzone').style.display    = 'none';
@@ -1153,6 +1079,7 @@
       const metaEl = document.getElementById('fileAudioMeta');
       metaEl.className = 'file-audio-meta loading';
       metaEl.textContent = 'Analysing…';
+      audioMetaString = '';
       analyseAudioFile(file, metaEl);
     }
 
@@ -1161,12 +1088,10 @@
         const ext      = file.name.split('.').pop().toUpperCase();
         const mimeMap  = { 'WAV':'WAV', 'MP3':'MP3', 'AIFF':'AIFF', 'AIF':'AIFF', 'M4A':'M4A' };
         const fileType = mimeMap[ext] || ext;
-
         const arrayBuffer = await file.arrayBuffer();
         const audioCtx    = new (window.AudioContext || window.webkitAudioContext)();
         const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
         audioCtx.close();
-
         const channels   = audioBuffer.numberOfChannels;
         const sampleRate = audioBuffer.sampleRate;
         const duration   = audioBuffer.duration;
@@ -1175,19 +1100,97 @@
         const durStr     = formatTime(duration);
         const approxBr   = Math.round((file.size * 8) / duration / 1000);
         const brStr      = '~' + approxBr + ' kbps';
-
+        audioMetaString  = `${fileType} · ${channelStr} · ${srStr} · ${brStr} · ${durStr}`;
         metaEl.className = 'file-audio-meta';
-        metaEl.textContent = `${fileType} · ${channelStr} · ${srStr} · ${brStr} · ${durStr}`;
+        metaEl.textContent = audioMetaString;
       } catch (err) {
+        audioMetaString  = file.name.split('.').pop().toUpperCase();
         metaEl.className = 'file-audio-meta';
-        metaEl.textContent = file.name.split('.').pop().toUpperCase() + ' · Unable to analyse file';
+        metaEl.textContent = audioMetaString + ' · Unable to analyse file';
       }
     }
 
-    function clearFile() {
-      selectedFile = null; audioFileInput.value = '';
+    function clearAudioFile() {
+      selectedFile = null; audioFileInput.value = ''; audioMetaString = '';
       document.getElementById('dropzone').style.display    = 'block';
       document.getElementById('fileSelected').style.display = 'none';
+    }
+
+    // ── Image file handling (with HEIC support) ───────────────────
+    const imageFileInput = document.getElementById('imageFile');
+    const imgDropzone    = document.getElementById('imgDropzone');
+
+    imageFileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleImageFileSelect(e.target.files[0]); });
+    imgDropzone.addEventListener('dragover',  (e) => { e.preventDefault(); imgDropzone.classList.add('dragover'); });
+    imgDropzone.addEventListener('dragleave', ()  => imgDropzone.classList.remove('dragover'));
+    imgDropzone.addEventListener('drop', (e) => {
+      e.preventDefault(); imgDropzone.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) handleImageFileSelect(e.dataTransfer.files[0]);
+    });
+
+    async function handleImageFileSelect(file) {
+      if (file.size > 30 * 1024 * 1024) { alert('Image is too large. Please choose a file under 30MB.'); return; }
+
+      const isHeic = file.type === 'image/heic' || file.type === 'image/heif'
+        || /\.(heic|heif)$/i.test(file.name);
+
+      let previewFile = file;
+
+      // Convert HEIC to JPEG for preview
+      if (isHeic) {
+        document.getElementById('imgMeta').textContent = 'Converting HEIC…';
+        document.getElementById('imgDropzone').style.display = 'none';
+        document.getElementById('imgSelected').style.display  = 'flex';
+        document.getElementById('imgPreview').src = '';
+        document.getElementById('imgName').textContent = file.name;
+        try {
+          const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
+          previewFile = Array.isArray(converted) ? converted[0] : converted;
+        } catch (err) {
+          alert('Could not convert HEIC file. Please convert to JPEG or PNG first.');
+          clearImageFile(); return;
+        }
+      }
+
+      selectedImageFile = previewFile;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        document.getElementById('imgPreview').src  = e.target.result;
+        document.getElementById('imgName').textContent = file.name;
+        document.getElementById('imgMeta').textContent = 'Will be resized to 600×600px JPEG';
+        document.getElementById('imgDropzone').style.display = 'none';
+        document.getElementById('imgSelected').style.display  = 'flex';
+      };
+      reader.readAsDataURL(previewFile);
+    }
+
+    function clearImageFile() {
+      selectedImageFile = null; imageFileInput.value = '';
+      document.getElementById('imgDropzone').style.display = 'block';
+      document.getElementById('imgSelected').style.display  = 'none';
+      document.getElementById('imgPreview').src = '';
+    }
+
+    // ── Image resize: centre-crop to 600×600 JPEG ─────────────────
+    function resizeImageToBlob(file) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          const SIZE = 600;
+          const canvas = document.getElementById('resizeCanvas');
+          canvas.width = SIZE; canvas.height = SIZE;
+          const ctx = canvas.getContext('2d');
+          const side = Math.min(img.width, img.height);
+          const sx   = (img.width  - side) / 2;
+          const sy   = (img.height - side) / 2;
+          ctx.drawImage(img, sx, sy, side, side, 0, 0, SIZE, SIZE);
+          canvas.toBlob(resolve, 'image/jpeg', 0.82);
+        };
+        img.onerror = reject;
+        img.src = url;
+      });
     }
 
     // ── Equipment other ───────────────────────────────────────────
@@ -1196,7 +1199,6 @@
       document.getElementById('equipmentOther').classList.toggle('visible', val === 'other');
     }
 
-    // ── Type label ────────────────────────────────────────────────
     function getTypeLabel(type) {
       return { nature: 'Nature', external: 'External Architectural', internal: 'Internal Architectural' }[type] || type;
     }
@@ -1227,36 +1229,56 @@
       const submitBtn = document.getElementById('submitBtn');
       submitBtn.disabled = true;
       document.getElementById('uploadStatus').classList.add('visible');
-      setProgress(10, 'Uploading audio file…');
+      setProgress(5, 'Preparing…');
 
       try {
+        // 1. Upload audio
         const ext      = selectedFile.name.split('.').pop();
-        const filename = `${Date.now()}_${title.replace(/[^a-z0-9]/gi,'_').toLowerCase()}.${ext}`;
+        const safeName = title.replace(/[^a-z0-9]/gi,'_').toLowerCase();
+        const filename = `${Date.now()}_${safeName}.${ext}`;
         const { error: storageError } = await sb.storage
           .from('Audio').upload(filename, selectedFile, { cacheControl: '3600', upsert: false });
         if (storageError) throw new Error('Storage error: ' + storageError.message);
+        setProgress(40, 'Audio uploaded…');
 
-        setProgress(60, 'Saving to archive…');
         const { data: urlData } = sb.storage.from('Audio').getPublicUrl(filename);
         const audioUrl = urlData.publicUrl;
 
+        // 2. Upload image if present
+        let imageUrl = null;
+        if (selectedImageFile) {
+          setProgress(50, 'Processing image…');
+          const blob    = await resizeImageToBlob(selectedImageFile);
+          const imgName = `${Date.now()}_${safeName}.jpg`;
+          const { error: imgError } = await sb.storage
+            .from('images').upload(imgName, blob, { contentType: 'image/jpeg', cacheControl: '3600', upsert: false });
+          if (imgError) throw new Error('Image upload error: ' + imgError.message);
+          setProgress(70, 'Image uploaded…');
+          const { data: imgUrlData } = sb.storage.from('images').getPublicUrl(imgName);
+          imageUrl = imgUrlData.publicUrl;
+        }
+
         setProgress(80, 'Saving record…');
+
+        // 3. Insert DB record
         const { error: dbError } = await sb.from('sounds').insert([{
           title, description, type,
           type_label:    getTypeLabel(type),
           location_type: locationType,
           location_name: locationName,
           lat: uploadLat, lng: uploadLng,
-          audio_url: audioUrl,
+          audio_url:     audioUrl,
+          image_url:     imageUrl,
+          audio_meta:    audioMetaString || null,
           recorded_date: recordedDate,
-          contributor, equipment,
-          status: 'approved'
+          contributor,   equipment,
+          status:        'approved'
         }]);
         if (dbError) throw new Error('Database error: ' + dbError.message);
 
         setProgress(100, 'Done!');
         setTimeout(() => {
-          document.getElementById('uploadFormBody').style.display  = 'none';
+          document.getElementById('uploadFormBody').style.display    = 'none';
           document.getElementById('uploadPanelFooter').style.display = 'none';
           document.getElementById('uploadSuccess').classList.add('visible');
           loadSounds();
@@ -1281,11 +1303,12 @@
        'uploadEquipmentOther','geocodeInput','manualLat','manualLng'].forEach(id => {
         const el = document.getElementById(id); if (el) el.value = '';
       });
-      document.getElementById('uploadType').value        = '';
-      document.getElementById('uploadLocationType').value= '';
-      document.getElementById('uploadEquipment').value   = '';
+      document.getElementById('uploadType').value         = '';
+      document.getElementById('uploadLocationType').value = '';
+      document.getElementById('uploadEquipment').value    = '';
       document.getElementById('equipmentOther').classList.remove('visible');
-      clearFile();
+      clearAudioFile();
+      clearImageFile();
       uploadLat = null; uploadLng = null;
       document.getElementById('displayLat').textContent = '—';
       document.getElementById('displayLng').textContent = '—';
@@ -1298,12 +1321,10 @@
       document.getElementById('submitBtn').disabled = false;
       setProgress(0, '');
       document.getElementById('uploadFormBody').scrollTop = 0;
-      // Reset to search tab
-      document.querySelectorAll('.loc-tab').forEach((t,i) => t.classList.toggle('active', i===0));
+      document.querySelectorAll('.loc-tab').forEach((t,i)    => t.classList.toggle('active', i===0));
       document.querySelectorAll('.loc-tab-panel').forEach((p,i) => p.classList.toggle('active', i===0));
     }
 
-    // Close geocode results when clicking outside
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.location-search-wrap')) {
         document.getElementById('geocodeResults').classList.remove('visible');
