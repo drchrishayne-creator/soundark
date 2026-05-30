@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SoundArk Admin</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Nunito+Sans:opsz,wght@6..12,300;6..12,400;6..12,500;6..12,600&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --forest:       #2A3F3A;
+      --forest-mid:   #3A5A52;
+      --moss:         #5B8C7A;
+      --parchment:    #EDF4F1;
+      --parchment-dk: #D8EBE4;
+      --cream:        #F2F8F6;
+      --accent:       #4E9A8A;
+      --accent-light: #7EC4B4;
+      --slate:        #2C3A36;
+      --slate-mid:    #4A6560;
+      --white:        #FFFFFF;
+      --gold:         #C9A84C;
+      --danger:       #c0392b;
+      --font-display: 'Outfit', sans-serif;
+      --font-sans:    'Nunito Sans', sans-serif;
+      --radius:       4px;
+      --transition:   0.3s ease;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body { background: var(--cream); color: var(--slate); font-family: var(--font-sans); min-height: 100vh; }
+    button { cursor: pointer; border: none; background: none; font-family: inherit; }
+    a { color: inherit; text-decoration: none; }
+
+    /* ── Header ── */
+    .admin-header { background: var(--forest); padding: 0 2rem; height: 60px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(78,154,138,0.2); position: sticky; top: 0; z-index: 100; }
+    .admin-header-left { display: flex; align-items: center; gap: 1rem; }
+    .admin-logo { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; color: var(--parchment); }
+    .admin-badge { font-size: 0.62rem; background: rgba(78,154,138,0.25); color: var(--accent-light); padding: 0.2rem 0.6rem; border-radius: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+    .admin-header-right { display: flex; align-items: center; gap: 1rem; }
+    .admin-user { font-size: 0.78rem; color: rgba(237,244,241,0.7); }
+    .btn-back { font-size: 0.75rem; color: var(--accent-light); display: flex; align-items: center; gap: 0.4rem; transition: opacity var(--transition); }
+    .btn-back:hover { opacity: 0.8; }
+    .btn-signout { font-size: 0.75rem; font-weight: 500; color: rgba(237,244,241,0.7); padding: 0.35rem 0.8rem; border: 1px solid rgba(255,255,255,0.15); border-radius: var(--radius); transition: background var(--transition); }
+    .btn-signout:hover { background: rgba(255,255,255,0.1); }
+
+    /* ── Access denied ── */
+    .access-denied { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - 60px); gap: 1rem; text-align: center; padding: 2rem; }
+    .access-denied h2 { font-family: var(--font-display); font-size: 1.5rem; color: var(--forest); }
+    .access-denied p { color: var(--slate-mid); }
+
+    /* ── Layout ── */
+    .admin-layout { display: grid; grid-template-columns: 200px 1fr; min-height: calc(100vh - 60px); }
+    .admin-sidebar { background: var(--forest-mid); padding: 1.5rem 0; border-right: 1px solid rgba(78,154,138,0.15); }
+    .sidebar-nav { list-style: none; }
+    .sidebar-nav li a { display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 1.5rem; font-size: 0.82rem; color: rgba(237,244,241,0.7); transition: background var(--transition), color var(--transition); }
+    .sidebar-nav li a:hover, .sidebar-nav li a.active { background: rgba(78,154,138,0.15); color: var(--parchment); }
+    .sidebar-nav li a svg { flex-shrink: 0; opacity: 0.7; }
+    .admin-main { padding: 2rem; overflow-y: auto; }
+
+    /* ── Sections ── */
+    .admin-section { display: none; }
+    .admin-section.active { display: block; }
+    .section-header { margin-bottom: 1.5rem; }
+    .section-header h2 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; color: var(--forest); margin-bottom: 0.25rem; }
+    .section-header p { font-size: 0.85rem; color: var(--slate-mid); }
+
+    /* ── Stats bar ── */
+    .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+    .stat-box { background: var(--white); border: 1px solid rgba(92,122,94,0.15); border-radius: 6px; padding: 1.25rem; }
+    .stat-box-num { font-family: var(--font-display); font-size: 1.8rem; font-weight: 700; color: var(--forest); line-height: 1; }
+    .stat-box-label { font-size: 0.72rem; color: var(--slate-mid); margin-top: 0.3rem; text-transform: uppercase; letter-spacing: 0.08em; }
+
+    /* ── Table ── */
+    .table-wrap { background: var(--white); border: 1px solid rgba(92,122,94,0.15); border-radius: 6px; overflow: hidden; }
+    .table-toolbar { padding: 0.9rem 1.25rem; border-bottom: 1px solid var(--parchment-dk); display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .table-search { padding: 0.5rem 0.75rem; font-family: var(--font-sans); font-size: 0.82rem; background: var(--cream); border: 1px solid rgba(92,122,94,0.2); border-radius: var(--radius); color: var(--slate); outline: none; width: 240px; }
+    .table-search:focus { border-color: var(--accent); }
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 0.65rem 1rem; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--moss); text-align: left; background: var(--parchment); border-bottom: 1px solid var(--parchment-dk); white-space: nowrap; }
+    td { padding: 0.75rem 1rem; font-size: 0.82rem; color: var(--slate); border-bottom: 1px solid var(--parchment-dk); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(78,154,138,0.03); }
+    .td-email { font-weight: 500; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .td-title { font-weight: 500; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .td-actions { display: flex; gap: 0.4rem; align-items: center; }
+    .empty-row td { text-align: center; color: var(--slate-mid); padding: 2rem; font-style: italic; }
+
+    /* ── Badges / pills ── */
+    .role-badge { display: inline-flex; align-items: center; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.2rem 0.6rem; border-radius: 10px; }
+    .role-admin       { background: rgba(192,57,43,0.1);  color: var(--danger); }
+    .role-superuser   { background: rgba(201,168,76,0.15); color: #8a6a00; }
+    .role-contributor { background: rgba(78,154,138,0.12); color: var(--accent); }
+
+    .stars-inline { color: var(--gold); font-size: 0.75rem; letter-spacing: 1px; }
+    .no-rating { color: #ccc; font-size: 0.75rem; }
+
+    /* ── Action buttons ── */
+    .btn-sm { font-size: 0.72rem; font-weight: 500; padding: 0.3rem 0.65rem; border-radius: var(--radius); transition: background var(--transition), color var(--transition); }
+    .btn-sm-primary   { background: rgba(78,154,138,0.1);  color: var(--accent);  }
+    .btn-sm-primary:hover { background: rgba(78,154,138,0.2); }
+    .btn-sm-danger    { background: rgba(192,57,43,0.08); color: var(--danger); }
+    .btn-sm-danger:hover  { background: rgba(192,57,43,0.15); }
+    .btn-sm-neutral   { background: var(--parchment-dk); color: var(--slate-mid); }
+    .btn-sm-neutral:hover { background: var(--parchment-dk); color: var(--forest); }
+
+    /* ── Role select inline ── */
+    .role-select { font-family: var(--font-sans); font-size: 0.75rem; padding: 0.25rem 0.5rem; border: 1px solid rgba(92,122,94,0.25); border-radius: var(--radius); color: var(--slate); background: var(--white); outline: none; cursor: pointer; }
+    .role-select:focus { border-color: var(--accent); }
+
+    /* ── Confirm dialog ── */
+    .confirm-overlay { position: fixed; inset: 0; z-index: 5000; background: rgba(30,43,31,0.6); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+    .confirm-overlay.active { opacity: 1; pointer-events: all; }
+    .confirm-box { background: var(--white); border-radius: 8px; padding: 2rem; width: 360px; max-width: calc(100vw - 2rem); box-shadow: 0 20px 60px rgba(30,43,31,0.3); }
+    .confirm-box h3 { font-family: var(--font-display); font-size: 1rem; color: var(--forest); margin-bottom: 0.5rem; }
+    .confirm-box p { font-size: 0.85rem; color: var(--slate-mid); margin-bottom: 1.5rem; line-height: 1.5; }
+    .confirm-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
+    .btn-confirm-cancel { font-size: 0.82rem; font-weight: 500; color: var(--slate-mid); background: var(--parchment-dk); padding: 0.55rem 1.1rem; border-radius: var(--radius); transition: background var(--transition); }
+    .btn-confirm-ok { font-size: 0.82rem; font-weight: 600; color: var(--white); background: var(--danger); padding: 0.55rem 1.1rem; border-radius: var(--radius); transition: background var(--transition); }
+    .btn-confirm-ok:hover { background: #a93226; }
+
+    /* ── Toast ── */
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; background: var(--forest); color: var(--parchment); font-size: 0.82rem; padding: 0.75rem 1.25rem; border-radius: 6px; box-shadow: 0 4px 20px rgba(30,43,31,0.3); transform: translateY(20px); opacity: 0; transition: all 0.25s ease; pointer-events: none; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    @media (max-width: 768px) {
+      .admin-layout { grid-template-columns: 1fr; }
+      .admin-sidebar { display: none; }
+      .stats-bar { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="admin-header">
+    <div class="admin-header-left">
+      <span class="admin-logo">The SoundArk</span>
+      <span class="admin-badge">Admin</span>
+    </div>
+    <div class="admin-header-right">
+      <span class="admin-user" id="adminUserEmail"></span>
+      <a href="index.html" class="btn-back">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Back to Site
+      </a>
+      <button class="btn-signout" onclick="signOut()">Sign Out</button>
+    </div>
+  </header>
+
+  <!-- Access denied (shown until auth confirmed) -->
+  <div class="access-denied" id="accessDenied" style="display:none;">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#5B8C7A" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+    <h2>Access Restricted</h2>
+    <p>This page is only accessible to administrators.</p>
+    <a href="index.html" style="color:var(--accent);font-size:0.85rem;">Return to SoundArk</a>
+  </div>
+
+  <!-- Admin layout -->
+  <div class="admin-layout" id="adminLayout" style="display:none;">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+      <ul class="sidebar-nav">
+        <li>
+          <a href="#" class="active" onclick="showSection('dashboard', this)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            Dashboard
+          </a>
+        </li>
+        <li>
+          <a href="#" onclick="showSection('users', this)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Users
+          </a>
+        </li>
+        <li>
+          <a href="#" onclick="showSection('sounds', this)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            Sounds
+          </a>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main -->
+    <main class="admin-main">
+
+      <!-- Dashboard -->
+      <div class="admin-section active" id="sectionDashboard">
+        <div class="section-header">
+          <h2>Dashboard</h2>
+          <p>Overview of The SoundArk archive.</p>
+        </div>
+        <div class="stats-bar">
+          <div class="stat-box"><div class="stat-box-num" id="statSounds">—</div><div class="stat-box-label">Recordings</div></div>
+          <div class="stat-box"><div class="stat-box-num" id="statUsers">—</div><div class="stat-box-label">Users</div></div>
+          <div class="stat-box"><div class="stat-box-num" id="statRated">—</div><div class="stat-box-label">Rated</div></div>
+          <div class="stat-box"><div class="stat-box-num" id="statAdmins">—</div><div class="stat-box-label">Admins</div></div>
+        </div>
+        <p style="font-size:0.85rem;color:var(--slate-mid);">Use the sidebar to manage users and recordings.</p>
+      </div>
+
+      <!-- Users -->
+      <div class="admin-section" id="sectionUsers">
+        <div class="section-header">
+          <h2>Users</h2>
+          <p>Manage contributor roles and access.</p>
+        </div>
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <input class="table-search" type="text" placeholder="Search by email…" oninput="filterUsersTable(this.value)" />
+            <span style="font-size:0.78rem;color:var(--slate-mid);" id="userCount"></span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Joined</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody">
+              <tr class="empty-row"><td colspan="4">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Sounds -->
+      <div class="admin-section" id="sectionSounds">
+        <div class="section-header">
+          <h2>Recordings</h2>
+          <p>Edit or delete any recording in the archive.</p>
+        </div>
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <input class="table-search" type="text" placeholder="Search by title or location…" oninput="filterSoundsTable(this.value)" />
+            <span style="font-size:0.78rem;color:var(--slate-mid);" id="soundCount"></span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Location</th>
+                <th>Type</th>
+                <th>Rating</th>
+                <th>Contributor</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="soundsTableBody">
+              <tr class="empty-row"><td colspan="6">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Confirm dialog -->
+  <div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-box">
+      <h3 id="confirmTitle">Are you sure?</h3>
+      <p id="confirmMsg">This action cannot be undone.</p>
+      <div class="confirm-actions">
+        <button class="btn-confirm-cancel" onclick="closeConfirm()">Cancel</button>
+        <button class="btn-confirm-ok" id="confirmOkBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const sb = window.supabase.createClient(CONFIG.supabase.url, CONFIG.supabase.anonKey);
+
+    let currentUser    = null;
+    let currentProfile = null;
+    let allUsers       = [];
+    let allSounds      = [];
+    let confirmCallback = null;
+
+    // ── Auth ──────────────────────────────────────────────────────
+    async function initAdmin() {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) { showAccessDenied(); return; }
+      currentUser = session.user;
+      const { data: profile } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+      if (!profile || profile.role !== 'admin') { showAccessDenied(); return; }
+      currentProfile = profile;
+      document.getElementById('adminUserEmail').textContent = currentUser.email;
+      document.getElementById('adminLayout').style.display = 'grid';
+      loadDashboard();
+      loadUsers();
+      loadSounds();
+    }
+
+    function showAccessDenied() {
+      document.getElementById('accessDenied').style.display = 'flex';
+    }
+
+    async function signOut() {
+      await sb.auth.signOut();
+      window.location.href = 'index.html';
+    }
+
+    // ── Navigation ────────────────────────────────────────────────
+    function showSection(name, link) {
+      document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+      document.getElementById('section' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+      if (link) link.classList.add('active');
+    }
+
+    // ── Dashboard ─────────────────────────────────────────────────
+    async function loadDashboard() {
+      const [{ count: soundCount }, { count: userCount }, { count: ratedCount }, { count: adminCount }] = await Promise.all([
+        sb.from('sounds').select('*', { count: 'exact', head: true }).eq('status','approved'),
+        sb.from('profiles').select('*', { count: 'exact', head: true }),
+        sb.from('sounds').select('*', { count: 'exact', head: true }).not('rating_loopability', 'is', null),
+        sb.from('profiles').select('*', { count: 'exact', head: true }).eq('role','admin')
+      ]);
+      document.getElementById('statSounds').textContent = soundCount ?? '—';
+      document.getElementById('statUsers').textContent  = userCount  ?? '—';
+      document.getElementById('statRated').textContent  = ratedCount ?? '—';
+      document.getElementById('statAdmins').textContent = adminCount ?? '—';
+    }
+
+    // ── Users ─────────────────────────────────────────────────────
+    async function loadUsers() {
+      const { data, error } = await sb.from('profiles').select('*').order('created_at', { ascending: false });
+      if (error) { showToast('Failed to load users: ' + error.message); return; }
+      allUsers = data || [];
+      renderUsers(allUsers);
+      document.getElementById('userCount').textContent = allUsers.length + ' users';
+    }
+
+    function renderUsers(users) {
+      const tbody = document.getElementById('usersTableBody');
+      if (!users.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="4">No users found.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = users.map(u => `
+        <tr data-id="${u.id}">
+          <td class="td-email">${escHtml(u.email)}</td>
+          <td>
+            <select class="role-select" onchange="changeRole('${u.id}', this.value)" ${u.id === currentUser.id ? 'disabled' : ''}>
+              <option value="contributor" ${u.role==='contributor'?'selected':''}>Contributor</option>
+              <option value="superuser"   ${u.role==='superuser'  ?'selected':''}>Superuser</option>
+              <option value="admin"       ${u.role==='admin'      ?'selected':''}>Admin</option>
+            </select>
+          </td>
+          <td>${u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB') : '—'}</td>
+          <td class="td-actions">
+            ${u.id !== currentUser.id ? `<button class="btn-sm btn-sm-danger" onclick="confirmDeleteUser('${u.id}','${escHtml(u.email)}')">Delete</button>` : '<span style="font-size:0.72rem;color:var(--slate-mid);">You</span>'}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filterUsersTable(q) {
+      const filtered = allUsers.filter(u => u.email.toLowerCase().includes(q.toLowerCase()));
+      renderUsers(filtered);
+    }
+
+    async function changeRole(userId, newRole) {
+      const { error } = await sb.from('profiles').update({ role: newRole }).eq('id', userId);
+      if (error) { showToast('Failed to update role: ' + error.message); loadUsers(); return; }
+      showToast('Role updated');
+      loadDashboard();
+    }
+
+    function confirmDeleteUser(userId, email) {
+      openConfirm(
+        'Delete User',
+        `Delete the account for ${email}? This cannot be undone.`,
+        async () => {
+          const { error } = await sb.from('profiles').delete().eq('id', userId);
+          if (error) { showToast('Failed to delete user: ' + error.message); return; }
+          showToast('User deleted');
+          loadUsers(); loadDashboard();
+        }
+      );
+    }
+
+    // ── Sounds ────────────────────────────────────────────────────
+    async function loadSounds() {
+      const { data, error } = await sb.from('sounds').select('*').eq('status','approved').order('created_at', { ascending: false });
+      if (error) { showToast('Failed to load sounds: ' + error.message); return; }
+      allSounds = data || [];
+      renderSounds(allSounds);
+      document.getElementById('soundCount').textContent = allSounds.length + ' recordings';
+    }
+
+    function starsHtml(val) {
+      if (!val) return '<span class="no-rating">—</span>';
+      return '<span class="stars-inline">' + '★'.repeat(val) + '☆'.repeat(3 - val) + '</span>';
+    }
+
+    function renderSounds(sounds) {
+      const tbody = document.getElementById('soundsTableBody');
+      if (!sounds.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No recordings found.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = sounds.map(s => `
+        <tr data-id="${s.id}">
+          <td class="td-title" title="${escHtml(s.title)}">${escHtml(s.title)}</td>
+          <td style="font-size:0.78rem;color:var(--slate-mid);">${escHtml(s.location_name || '—')}</td>
+          <td><span style="font-size:0.72rem;">${escHtml(s.type_label || s.type || '—')}</span></td>
+          <td>${starsHtml(s.rating_quality)}</td>
+          <td style="font-size:0.78rem;color:var(--slate-mid);">${escHtml(s.contributor || '—')}</td>
+          <td class="td-actions">
+            <button class="btn-sm btn-sm-primary" onclick="editSound(${s.id})">Edit</button>
+            <button class="btn-sm btn-sm-danger"  onclick="confirmDeleteSound(${s.id},'${escHtml(s.title)}')">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filterSoundsTable(q) {
+      const ql = q.toLowerCase();
+      const filtered = allSounds.filter(s =>
+        (s.title||'').toLowerCase().includes(ql) ||
+        (s.location_name||'').toLowerCase().includes(ql)
+      );
+      renderSounds(filtered);
+    }
+
+    function editSound(id) {
+      // Open index.html with the sound pre-loaded for editing via sessionStorage
+      sessionStorage.setItem('adminEditSoundId', id);
+      window.location.href = 'index.html';
+    }
+
+    function confirmDeleteSound(id, title) {
+      openConfirm(
+        'Delete Recording',
+        `Delete "${title}"? This cannot be undone.`,
+        async () => {
+          const { error } = await sb.from('sounds').delete().eq('id', id);
+          if (error) { showToast('Failed to delete: ' + error.message); return; }
+          showToast('Recording deleted');
+          loadSounds(); loadDashboard();
+        }
+      );
+    }
+
+    // ── Confirm dialog ────────────────────────────────────────────
+    function openConfirm(title, msg, cb) {
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmMsg').textContent   = msg;
+      confirmCallback = cb;
+      document.getElementById('confirmOverlay').classList.add('active');
+    }
+    function closeConfirm() {
+      document.getElementById('confirmOverlay').classList.remove('active');
+      confirmCallback = null;
+    }
+    document.getElementById('confirmOkBtn').addEventListener('click', () => {
+      if (confirmCallback) confirmCallback();
+      closeConfirm();
+    });
+
+    // ── Toast ─────────────────────────────────────────────────────
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2800);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────
+    function escHtml(str) {
+      return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Init ──────────────────────────────────────────────────────
+    initAdmin();
+  </script>
+</body>
+</html>
